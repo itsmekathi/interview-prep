@@ -286,6 +286,143 @@ class Program
 
 ---
 
+### **Semaphore in C# .NET**
+
+A **Semaphore** is a synchronization primitive in .NET used to control access to a shared resource by multiple threads in a concurrent environment. It limits the number of threads that can access the resource simultaneously.
+
+---
+
+### **Types of Semaphores in .NET**
+
+1. **`Semaphore`**:
+
+   - A classic semaphore that works across multiple processes (system-wide).
+
+2. **`SemaphoreSlim`**:
+   - A lightweight version designed for single-process usage.
+   - Recommended for most applications due to better performance and lower overhead.
+
+---
+
+### **How Does a Semaphore Work?**
+
+- A semaphore maintains a count, which represents the number of threads that can access the resource at a given time.
+- When a thread enters the semaphore:
+  - The count decreases.
+- When a thread exits the semaphore:
+  - The count increases.
+- If the count reaches zero, additional threads attempting to enter the semaphore will block until another thread exits.
+
+---
+
+### **Use Case of Semaphore**
+
+#### **Scenario:**
+
+Suppose a program downloads files from the internet. To avoid overloading the server or consuming too much bandwidth, you want to allow only **3 threads** to download files concurrently.
+
+---
+
+### **Simple Example Using `SemaphoreSlim`**
+
+```csharp
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+class Program
+{
+    static SemaphoreSlim semaphore = new SemaphoreSlim(3); // Limit to 3 threads
+
+    static async Task DownloadFileAsync(int fileId)
+    {
+        Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} waiting to download File {fileId}...");
+        await semaphore.WaitAsync(); // Wait for a slot
+        try
+        {
+            Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} downloading File {fileId}...");
+            await Task.Delay(2000); // Simulate file download
+            Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} completed downloading File {fileId}.");
+        }
+        finally
+        {
+            semaphore.Release(); // Release the slot
+        }
+    }
+
+    static async Task Main(string[] args)
+    {
+        Task[] tasks = new Task[10];
+
+        for (int i = 0; i < 10; i++)
+        {
+            int fileId = i + 1;
+            tasks[i] = DownloadFileAsync(fileId);
+        }
+
+        await Task.WhenAll(tasks); // Wait for all tasks to complete
+        Console.WriteLine("All files downloaded.");
+    }
+}
+```
+
+---
+
+### **Explanation**
+
+1. **`SemaphoreSlim semaphore = new SemaphoreSlim(3);`**
+
+   - Creates a semaphore that allows up to **3 threads** to enter concurrently.
+
+2. **`semaphore.WaitAsync();`**
+
+   - Asynchronously waits for a thread slot. If the count is greater than zero, it decrements the count and allows the thread to proceed. Otherwise, the thread waits.
+
+3. **`semaphore.Release();`**
+
+   - Increments the count, signaling that a thread slot is available.
+
+4. **Tasks and Concurrency**:
+   - The program starts 10 tasks, but only 3 can download files at the same time due to the semaphore.
+
+---
+
+### **Output Example**
+
+```
+Thread 1 waiting to download File 1...
+Thread 2 waiting to download File 2...
+Thread 3 waiting to download File 3...
+Thread 1 downloading File 1...
+Thread 2 downloading File 2...
+Thread 3 downloading File 3...
+Thread 4 waiting to download File 4...
+Thread 5 waiting to download File 5...
+Thread 1 completed downloading File 1.
+Thread 1 downloading File 4...
+Thread 2 completed downloading File 2.
+Thread 2 downloading File 5...
+...
+All files downloaded.
+```
+
+---
+
+### **Real-World Use Cases**
+
+1. **Throttling Concurrent Operations**:
+
+   - Managing API calls, database connections, or file downloads.
+
+2. **Limiting Access to Shared Resources**:
+
+   - Controlling access to a fixed pool of resources (e.g., a connection pool).
+
+3. **Concurrent Processing**:
+   - Ensuring a manageable level of parallelism in data processing.
+
+---
+
 ### **Best Practices for Multi-threading**
 
 1. **Avoid Over-Threading**:
